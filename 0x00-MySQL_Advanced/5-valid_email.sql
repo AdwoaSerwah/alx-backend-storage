@@ -1,3 +1,5 @@
+-- Task: Reset valid_email when email is changed
+-- This trigger resets the valid_email attribute to 0 whenever the email is updated.
 DELIMITER $$
 
 CREATE TRIGGER reset_valid_email_on_email_change
