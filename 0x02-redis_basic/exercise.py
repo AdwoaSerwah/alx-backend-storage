@@ -6,6 +6,23 @@ Cache module that interacts with Redis.
 import redis
 import uuid
 from typing import Union, Callable, Optional
+import functools
+
+
+def count_calls(fn: Callable) -> Callable:
+    """
+    A decorator that counts how many times a function is called.
+    """
+    @functools.wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        """
+        Increments the count for the function each time it is called.
+        """
+        # Use class name and function name
+        key = f"{self.__class__.__name__}.{fn.__name__}"
+        self._redis.incr(key)  # Increment the call count in Redis
+        return fn(self, *args, **kwargs)
+    return wrapper
 
 
 class Cache:
@@ -20,6 +37,7 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Stores the input data in Redis with a random key.
