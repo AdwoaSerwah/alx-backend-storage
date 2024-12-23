@@ -1,5 +1,13 @@
 // Add the address field to all documents with name="Holberton school"
-db.school.updateMany(
-  { name: "Holberton school" },  // Query to match documents
-  { $set: { address: "972 Mission street" } }  // Update operation to add the address field
-)
+db.school.update(
+    {
+        name: "Holberton school"
+    },
+    {$set: {
+        address: "972 Mission street"
+        }
+  },
+  {
+    multi: true
+  }
+);
