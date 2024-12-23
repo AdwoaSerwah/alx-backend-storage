@@ -1,0 +1,2 @@
+// Script to list all documents where the name starts with "ALX"
+db.school.find({ name: /^Holberton/ })
