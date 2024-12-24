@@ -5,7 +5,7 @@ Cache module that interacts with Redis.
 
 import redis
 import uuid
-from typing import Union, Callable, Optional
+from typing import Union, Callable, Optional, Any
 from functools import wraps
 
 
@@ -21,15 +21,15 @@ def count_calls(method: Callable) -> Callable:
                   and calls the original method.
     """
     @wraps(method)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: Any, *args, **kwargs) -> str:
         """
         Wrapper function that increments the call count
         and calls the original method.
         """
         # Use the qualified name of the method for the Redis key
         # key = method.__qualname__
-        key = f"{method.__qualname__}"
-        self._redis.incr(key)  # Increment the call count in Redis
+        # key = f"{method.__qualname__}"
+        self._redis.incr(method.__qualname__)  # Increment the call count in Redis
         return method(self, *args, **kwargs)
 
     return wrapper
