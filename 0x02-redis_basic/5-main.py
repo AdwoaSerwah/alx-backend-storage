@@ -63,7 +63,7 @@ time.sleep(6)
 # Step 9: Check if the cache has expired (after 11 seconds)
 cached_content_expired = redis_client.get(url)
 if cached_content_expired:
-    print(f"Cache expired after 11 seconds: Still cached - {cached_content_expired.decode('utf-8')}")
+    print(f"Cache expired after 11 seconds: Still cached - yes")
 else:
     print(f"Cache expired after 11 seconds: Cache is not available")
 
