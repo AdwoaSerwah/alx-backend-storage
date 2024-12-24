@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Web caching module with Redis.
+Web caching and URL tracking module.
 """
 
 import redis
@@ -13,7 +13,7 @@ redis_client = redis.Redis()
 def get_page(url: str) -> str:
     """
     Fetches the HTML content of a URL and caches it in Redis.
-    Also tracks the number of times the URL is accessed.
+    Tracks the number of times the URL has been accessed.
 
     Args:
         url (str): The URL to fetch.
@@ -21,22 +21,21 @@ def get_page(url: str) -> str:
     Returns:
         str: The HTML content of the URL.
     """
-    cache_key = f"count:{url}"
+    # Define keys for tracking and caching
+    count_key = f"count:{url}"
     html_key = f"html:{url}"
 
-    # Increment the access count for the URL
-    redis_client.incr(cache_key)
+    # Increment the URL access count
+    redis_client.incr(count_key)
 
-    # Check if the URL content is already cached
+    # Check if the HTML content is already cached
     cached_html = redis_client.get(html_key)
     if cached_html:
         return cached_html.decode("utf-8")
 
-    # Fetch the content from the URL
+    # Fetch HTML content and cache it with expiration
     response = requests.get(url)
     html_content = response.text
-
-    # Cache the content with a 10-second expiration
-    redis_client.setex(html_key, 10, html_content)
+    redis_client.setex(html_key, 10, html_content)  # Cache for 10 seconds
 
     return html_content
