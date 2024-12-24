@@ -1,41 +1,48 @@
-#!/usr/bin/env python3
-"""
-Web caching and tracker module
-"""
-
 import redis
 import requests
 from typing import Callable
+from functools import wraps
 
-redis_client = redis.Redis()
+# Create Redis client
+r = redis.Redis()
 
 
+def count_calls(method: Callable) -> Callable:
+    """ Decorator that counts the number of times a method is called """
+    @wraps(method)
+    def wrapper(*args, **kwargs):
+        # Use method qualified name for the count key
+        count_key = f"count:{method.__qualname__}"
+        # Increment the count in Redis
+        r.incr(count_key)
+        return method(*args, **kwargs)
+    return wrapper
+
+
+@count_calls
 def get_page(url: str) -> str:
     """
-    Fetches the HTML content of a URL and caches it.
-    Tracks the number of times the URL is accessed.
+    Fetch the HTML content of a page from the URL and caches it for 10 seconds.
 
     Args:
         url (str): The URL to fetch.
 
     Returns:
-        str: The HTML content of the URL.
+        str: The HTML content of the page.
     """
-    count_key = f"count:{url}"
-    cache_key = f"cached:{url}"
+    # Check if the URL is cached
+    cached_content = r.get(url)
 
-    # Increment the count for the URL
-    redis_client.incr(count_key)
-
-    # Check if content is already cached
-    cached_content = redis_client.get(cache_key)
     if cached_content:
+        print(f"Cache hit for {url}")
         return cached_content.decode("utf-8")
 
-    # Fetch content from the URL
-    response = requests.get(url)
-    html_content = response.text
+    print(f"Cache miss for {url}")
 
-    # Cache the content with a 10-second expiration
-    redis_client.setex(cache_key, 10, html_content)
-    return html_content
+    # Make the HTTP request to fetch the page
+    response = requests.get(url)
+
+    # Cache the result for 10 seconds using setex (expiration time 10 seconds)
+    r.setex(url, 10, response.text)
+
+    return response.text
