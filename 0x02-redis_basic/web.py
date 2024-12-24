@@ -1,41 +1,36 @@
 #!/usr/bin/env python3
 """
-Web caching and tracker module
+Caching request module
 """
-
 import redis
 import requests
+from functools import wraps
 from typing import Callable
 
-redis_client = redis.Redis()
+
+def track_get_page(fn: Callable) -> Callable:
+    """ Decorator for get_page
+    """
+    @wraps(fn)
+    def wrapper(url: str) -> str:
+        """ Wrapper that:
+            - check whether a url's data is cached
+            - tracks how many times get_page is called
+        """
+        client = redis.Redis()
+        client.incr(f'count:{url}')
+        cached_page = client.get(f'{url}')
+        if cached_page:
+            return cached_page.decode('utf-8')
+        response = fn(url)
+        client.set(f'{url}', response, 10)
+        return response
+    return wrapper
 
 
+@track_get_page
 def get_page(url: str) -> str:
+    """ Makes a http request to a given endpoint
     """
-    Fetches the HTML content of a URL and caches it.
-    Tracks the number of times the URL is accessed.
-
-    Args:
-        url (str): The URL to fetch.
-
-    Returns:
-        str: The HTML content of the URL.
-    """
-    count_key = f"count:{url}"
-    cache_key = f"cached:{url}"
-
-    # Increment the count for the URL
-    redis_client.incr(count_key)
-
-    # Check if content is already cached
-    cached_content = redis_client.get(cache_key)
-    if cached_content:
-        return cached_content.decode("utf-8")
-
-    # Fetch content from the URL
     response = requests.get(url)
-    html_content = response.text
-
-    # Cache the content with a 10-second expiration
-    redis_client.setex(cache_key, 10, html_content)
-    return html_content
+    return response.text
