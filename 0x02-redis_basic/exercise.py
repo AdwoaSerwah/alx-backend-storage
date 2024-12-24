@@ -6,50 +6,33 @@ Cache module that interacts with Redis.
 import redis
 import uuid
 from typing import Union, Callable, Optional
-import functools
+from functools import wraps
+
 
 def count_calls(method: Callable) -> Callable:
     """
     A decorator that counts how many times a method is called.
 
-    This decorator increments the count for the method in Redis each time
-    the method is called, using the qualified name of the method as the key.
-    
     Args:
         method (Callable): The method to decorate.
-        
+
     Returns:
-        Callable: A wrapper function that increments the count and calls the original method.
+        Callable: A wrapper function that increments the count
+                  and calls the original method.
     """
-    @functools.wraps(method)
+    @wraps(method)
     def wrapper(self, *args, **kwargs):
         """
-        Increments the count for the method's qualified name each time it is called.
-        
-        Args:
-            self: The instance of the class.
-            *args: The arguments passed to the method.
-            **kwargs: The keyword arguments passed to the method.
-            
-        Returns:
-            The result of calling the original method.
+        Wrapper function that increments the call count
+        and calls the original method.
         """
         # Use the qualified name of the method for the Redis key
-        key = f"Cache.{method.__qualname__}"
-        print(f"Incrementing count for key: {key}")  # Debugging line
-        
-        # Get the current count from Redis or set it to 0 if it doesn't exist
-        current_count = self._redis.get(key)
-        if current_count is None:
-            print(f"Initializing count for key: {key}")  # Debugging line
-            self._redis.set(key, 1)
-        else:
-            self._redis.incr(key)  # Increment the call count in Redis
-        
-        # Call the original method
+        key = method.__qualname__
+        self._redis.incr(key)  # Increment the call count in Redis
         return method(self, *args, **kwargs)
 
     return wrapper
+
 
 class Cache:
     """

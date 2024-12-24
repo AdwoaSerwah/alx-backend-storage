@@ -5,10 +5,9 @@ Cache = __import__('exercise').Cache
 
 cache = Cache()
 
-# Call the store method three times
 cache.store(b"first")
-print(cache.get(f"Cache.{cache.store.__qualname__}"))  # Correct key format
+print(cache.get(cache.store.__qualname__))
 
 cache.store(b"second")
 cache.store(b"third")
-print(cache.get(f"Cache.{cache.store.__qualname__}"))  # Correct key format
+print(cache.get(cache.store.__qualname__))
