@@ -1,76 +1,51 @@
 #!/usr/bin/env python3
-""" Main file to verify caching and count increments for get_page """
+"""
+Script to verify the caching and access count behavior of the get_page function.
+"""
 
+import time
 from web import get_page
 import redis
-import time
 
-# Redis client
-redis_client = redis.Redis()
+# Create Redis client
+r = redis.Redis()
 
-# Test URL
-url = "http://google.com"
+def check_cache_and_count(url: str):
+    """ Function to check if the cache is working and count is tracked correctly """
+    # Check the initial count and cache
+    count_key = f"count:{get_page.__qualname__}"
+    initial_count = r.get(count_key)  # Get the current access count from Redis
 
-# Step 1: Check if the URL is already cached
-cached_content = redis_client.get(url)
-if cached_content:
-    print(f"Cached content found: {cached_content.decode('utf-8')}")
-else:
-    print(f"No cached content for {url}")
+    print(f"Initial count for {url}: {initial_count if initial_count else 0}")
 
-# Step 2: Fetch the page for the first time
-print("\nFetching content for the first time...")
-get_page(url)  # First access
+    # Get the page for the first time
+    print("\nFetching content for the first time...")
+    get_page(url)
 
-# Ensure the count key exists, if not initialize it
-count_key = f"count:{url}"
-count_after_first = redis_client.get(count_key)
-if not count_after_first:
-    count_after_first = 0
-else:
-    count_after_first = int(count_after_first)
+    # Get the count after first access
+    count_after_first = r.get(count_key)
+    print(f"Count after first access: {count_after_first if count_after_first else 0}")
 
-# Step 3: Check count after first access
-print(f"Count after first access: {count_after_first}")
+    # Wait for 5 seconds and fetch the page again to verify cache behavior
+    time.sleep(5)
+    print("\nFetching content after 5 seconds...")
+    get_page(url)
 
-# Step 4: Wait for 5 seconds (before the cache expires)
-print("\nWaiting for 5 seconds...")
-time.sleep(5)
+    # Get the count after second access
+    count_after_second = r.get(count_key)
+    print(f"Count after second access: {count_after_second if count_after_second else 0}")
 
-# Step 5: Check cached content again (before it expires)
-cached_content_5s = redis_client.get(url)
-if cached_content_5s:
-    print(f"Content after 5 seconds (still cached): yes still cached")
-else:
-    print(f"Content after 5 seconds: No cache available")
+    # Wait for 6 more seconds to ensure cache expiration
+    time.sleep(6)
+    print("\nWaiting for cache to expire (after 10 seconds)...")
 
-# Step 6: Fetch the page for the second time (to refresh cache)
-print("\nFetching content for the second time...")
-get_page(url)  # Second access
+    # Check if the cache is expired and if the count is still available
+    expired_content = r.get(url)
+    print(f"Cache expired after 10 seconds: {'Cache is not available' if not expired_content else 'Cache is still available'}")
 
-# Step 7: Check count after second access
-count_after_second = redis_client.get(count_key)
-if not count_after_second:
-    count_after_second = 0
-else:
-    count_after_second = int(count_after_second)
-print(f"Count after second access: {count_after_second}")
+    final_count = r.get(count_key)
+    print(f"Final count for {url}: {final_count if final_count else 0}")
 
-# Step 8: Wait for 6 more seconds (total 11 seconds) to ensure cache expires
-print("\nWaiting for 6 more seconds to allow cache expiration...")
-time.sleep(6)
-
-# Step 9: Check if the cache has expired (after 11 seconds)
-cached_content_expired = redis_client.get(url)
-if cached_content_expired:
-    print(f"Cache expired after 11 seconds: Still cached - yes")
-else:
-    print(f"Cache expired after 11 seconds: Cache is not available")
-
-# Step 10: Check the final count after all accesses
-final_count = redis_client.get(count_key)
-if not final_count:
-    final_count = 0
-else:
-    final_count = int(final_count)
-print(f"Final count for {url}: {final_count}")
+if __name__ == "__main__":
+    url = "http://google.com"
+    check_cache_and_count(url)

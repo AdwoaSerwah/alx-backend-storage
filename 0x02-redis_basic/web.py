@@ -26,10 +26,19 @@ def count_calls(method: Callable) -> Callable:
     """
     @wraps(method)
     def wrapper(*args, **kwargs):
-        # Use method qualified name for the count key
-        count_key = f"count:{method.__qualname__}"
-        # Increment the count in Redis
-        r.incr(count_key)
+        url = args[0]  # Assume the URL is the first argument
+        count_key = f"count:{url}"
+
+        # Check if the count is cached
+        cached_count = r.get(count_key)
+        if cached_count is None:
+            # If not cached, increment and cache the count with expiration time
+            r.incr(count_key)
+            r.expire(count_key, 10)  # Set expiration time for the count key
+        else:
+            # If cached, just increment the count
+            r.incr(count_key)
+
         return method(*args, **kwargs)
 
     return wrapper
@@ -38,8 +47,8 @@ def count_calls(method: Callable) -> Callable:
 @count_calls
 def get_page(url: str) -> str:
     """
-    Fetches the HTML content of a page from the URL
-    and caches it for 10 seconds.
+    Fetches the HTML content of a page from the URL and
+    caches it for 10 seconds.
 
     If the content is cached, it will be returned from the cache. Otherwise,
     a new request will be made to fetch the content, and
@@ -55,10 +64,10 @@ def get_page(url: str) -> str:
     cached_content = r.get(url)
 
     if cached_content:
-        # print(f"Cache hit for {url}")
+        print(f"Cache hit for {url}")
         return cached_content.decode("utf-8")
 
-    # print(f"Cache miss for {url}")
+    print(f"Cache miss for {url}")
 
     # Make the HTTP request to fetch the page
     response = requests.get(url)
